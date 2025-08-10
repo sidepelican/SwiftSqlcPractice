@@ -27,7 +27,6 @@ fileprivate struct AnyCodingKey: CodingKey {
     init?(intValue: Int) {
         return nil
     }
-
 }
 
 extension SQLiteDataConvertible {

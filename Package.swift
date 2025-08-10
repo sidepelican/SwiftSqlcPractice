@@ -7,13 +7,13 @@ let package = Package(
     name: "SwiftSqlcPractice",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/vapor/sqlite-kit.git", from: "4.0.0"),
+        .package(url: "https://github.com/vapor/sqlite-nio.git", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
             name: "SwiftSqlcPractice",
             dependencies: [
-                .product(name: "SQLiteKit", package: "sqlite-kit"),
+                .product(name: "SQLiteNIO", package: "sqlite-nio"),
             ],
             resources: [.process("chinook.db")],
         ),

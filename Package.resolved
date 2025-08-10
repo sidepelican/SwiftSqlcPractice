@@ -1,33 +1,6 @@
 {
-  "originHash" : "0bd450861c12888122f3f401bd97361fcdc90318ae1736aa46484fb0793f408c",
+  "originHash" : "68cddf8aec5b354bd5597ff90aff6954bf3117e4788df882368ff2526f9c1e23",
   "pins" : [
-    {
-      "identity" : "async-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/async-kit.git",
-      "state" : {
-        "revision" : "e048c8ee94967e8d8a1c2ec0e1156d6f7fa34d31",
-        "version" : "1.20.0"
-      }
-    },
-    {
-      "identity" : "sql-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sql-kit.git",
-      "state" : {
-        "revision" : "0169d063f6eb9f384a85c5ccc881fe2b32de53f1",
-        "version" : "3.33.1"
-      }
-    },
-    {
-      "identity" : "sqlite-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sqlite-kit.git",
-      "state" : {
-        "revision" : "f35a863ecc2da5d563b836a9a696b148b0f4169f",
-        "version" : "4.5.2"
-      }
-    },
     {
       "identity" : "sqlite-nio",
       "kind" : "remoteSourceControl",
@@ -35,15 +8,6 @@
       "state" : {
         "revision" : "62d6935d970f6ebfc1f2469e7e813a148147c84d",
         "version" : "1.11.8"
-      }
-    },
-    {
-      "identity" : "swift-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-algorithms.git",
-      "state" : {
-        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
-        "version" : "1.2.1"
       }
     },
     {
@@ -80,15 +44,6 @@
       "state" : {
         "revision" : "1c30f0f2053b654e3d1302492124aa6d242cdba7",
         "version" : "2.86.0"
-      }
-    },
-    {
-      "identity" : "swift-numerics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics.git",
-      "state" : {
-        "revision" : "e0ec0f5f3af6f3e4d5e7a19d2af26b481acb6ba8",
-        "version" : "1.0.3"
       }
     },
     {

@@ -1,5 +1,4 @@
-import SQLiteKit
-import Logging
+import SQLiteNIO
 import Foundation
 
 let exampleDBPath = Bundle.module.path(forResource: "chinook", ofType: "db")!
@@ -10,12 +9,9 @@ defer {
     print("cleanup finished.")
 }
 
-let source = SQLiteConnectionSource(
-    configuration: .init(storage: .file(path: tmpDBPath))
-)
-let logger = Logger(label: "chinook")
-
-let conn = try await source.makeConnection(logger: logger, on: MultiThreadedEventLoopGroup.singleton.next()).get()
+let conn = try await SQLiteConnection.open(
+    storage: .file(path: tmpDBPath)
+).get()
 
 // Use generated query + types
 let found = try await Query.SearchTracksByName.execute(on: conn, input: .init(p1: "Love", p2: 5))
