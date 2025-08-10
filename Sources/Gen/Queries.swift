@@ -2,40 +2,45 @@
 // Template: query_template.swift.tmpl
 
 import Foundation
-import SQLKit
+import SQLiteNIO
 
 public enum Query {
 
   public enum GetTracksByAlbum {
     public static let name: String = "GetTracksByAlbum"
     public static let cmd: String = ":many"
-    public static let sql: String = "SELECT t.TrackId, t.Name, t.Milliseconds\nFROM tracks AS t\nWHERE t.AlbumId = ?1\nORDER BY t.TrackId"
+    public static let sql: String =
+      "SELECT t.TrackId, t.Name, t.Milliseconds\nFROM tracks AS t\nWHERE t.AlbumId = ?1\nORDER BY t.TrackId"
 
     // Input type
     public struct Input: Sendable {
-      public var p1:Int
-      public init(p1:Int) {
+      public var p1: Int
+      public init(p1: Int) {
         self.p1 = p1
       }
     }
 
     // Row type
     public struct Row: Sendable {
-      public var trackid:Int
-      public var name:String
-      public var milliseconds:Int
+      public var trackid: Int
+      public var name: String
+      public var milliseconds: Int
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> [Row] {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      let rows = try await db.raw("\(query)").all()
+      let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
       for r in rows {
-        result.append(Row(trackid: try r.decode(column: r.allColumns[0], as:Int.self), name: try r.decode(column: r.allColumns[1], as:String.self), milliseconds: try r.decode(column: r.allColumns[2], as:Int.self)
-        ))
+        result.append(
+          Row(
+            trackid: try r.decode(column: r.allColumns[0], as: Int.self),
+            name: try r.decode(column: r.allColumns[1], as: String.self),
+            milliseconds: try r.decode(column: r.allColumns[2], as: Int.self)
+          ))
       }
       return result
     }
@@ -44,13 +49,14 @@ public enum Query {
   public enum SearchTracksByName {
     public static let name: String = "SearchTracksByName"
     public static let cmd: String = ":many"
-    public static let sql: String = "SELECT TrackId, Name\nFROM tracks\nWHERE Name LIKE '%' || ?1 || '%'\nORDER BY Name\nLIMIT ?2"
+    public static let sql: String =
+      "SELECT TrackId, Name\nFROM tracks\nWHERE Name LIKE '%' || ?1 || '%'\nORDER BY Name\nLIMIT ?2"
 
     // Input type
     public struct Input: Sendable {
-      public var p1:String?
-      public var p2:Int
-      public init(p1:String?, p2:Int) {
+      public var p1: String?
+      public var p2: Int
+      public init(p1: String?, p2: Int) {
         self.p1 = p1
         self.p2 = p2
       }
@@ -58,21 +64,24 @@ public enum Query {
 
     // Row type
     public struct Row: Sendable {
-      public var trackid:Int
-      public var name:String
+      public var trackid: Int
+      public var name: String
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> [Row] {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
       query.bind(input.p2)
-      let rows = try await db.raw("\(query)").all()
+      let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
       for r in rows {
-        result.append(Row(trackid: try r.decode(column: r.allColumns[0], as:Int.self), name: try r.decode(column: r.allColumns[1], as:String.self)
-        ))
+        result.append(
+          Row(
+            trackid: try r.decode(column: r.allColumns[0], as: Int.self),
+            name: try r.decode(column: r.allColumns[1], as: String.self)
+          ))
       }
       return result
     }
@@ -81,32 +90,36 @@ public enum Query {
   public enum GetAlbumsByArtist {
     public static let name: String = "GetAlbumsByArtist"
     public static let cmd: String = ":many"
-    public static let sql: String = "SELECT a.AlbumId, a.Title\nFROM albums AS a\nWHERE a.ArtistId = ?1\nORDER BY a.AlbumId"
+    public static let sql: String =
+      "SELECT a.AlbumId, a.Title\nFROM albums AS a\nWHERE a.ArtistId = ?1\nORDER BY a.AlbumId"
 
     // Input type
     public struct Input: Sendable {
-      public var p1:Int
-      public init(p1:Int) {
+      public var p1: Int
+      public init(p1: Int) {
         self.p1 = p1
       }
     }
 
     // Row type
     public struct Row: Sendable {
-      public var albumid:Int
-      public var title:String
+      public var albumid: Int
+      public var title: String
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> [Row] {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      let rows = try await db.raw("\(query)").all()
+      let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
       for r in rows {
-        result.append(Row(albumid: try r.decode(column: r.allColumns[0], as:Int.self), title: try r.decode(column: r.allColumns[1], as:String.self)
-        ))
+        result.append(
+          Row(
+            albumid: try r.decode(column: r.allColumns[0], as: Int.self),
+            title: try r.decode(column: r.allColumns[1], as: String.self)
+          ))
       }
       return result
     }
@@ -119,24 +132,26 @@ public enum Query {
 
     // Input type
     public struct Input: Sendable {
-      public var p1:Int
-      public init(p1:Int) {
+      public var p1: Int
+      public init(p1: Int) {
         self.p1 = p1
       }
     }
 
     // Row type
     public struct Row: Sendable {
-      public var artistid:Int
-      public var name:String
+      public var artistid: Int
+      public var name: String
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> Row? {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> Row? {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      if let r = try await db.raw("\(query)").first() {
-        return Row(artistid: try r.decode(column: r.allColumns[0], as:Int.self), name: try r.decode(column: r.allColumns[1], as:String.self)
+      if let r = try await db.execute(query).first {
+        return Row(
+          artistid: try r.decode(column: r.allColumns[0], as: Int.self),
+          name: try r.decode(column: r.allColumns[1], as: String.self)
         )
       }
       return nil
@@ -150,8 +165,8 @@ public enum Query {
 
     // Input type
     public struct Input: Sendable {
-      public var p1:String
-      public init(p1:String) {
+      public var p1: String
+      public init(p1: String) {
         self.p1 = p1
       }
     }
@@ -161,10 +176,10 @@ public enum Query {
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      try await db.raw("\(query)").run()
+      _ = try await db.execute(query)
     }
   }
 
@@ -175,8 +190,8 @@ public enum Query {
 
     // Input type
     public struct Input: Sendable {
-      public var p1:Int
-      public init(p1:Int) {
+      public var p1: Int
+      public init(p1: Int) {
         self.p1 = p1
       }
     }
@@ -186,10 +201,10 @@ public enum Query {
     }
 
     // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLDatabase, input: Input) async throws {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws {
+      var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      try await db.raw("\(query)").run()
+      _ = try await db.execute(query)
     }
   }
 }

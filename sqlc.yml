@@ -14,4 +14,4 @@ sql:
         template: "query_template.swift.tmpl"
         filename: "Queries.swift"
 #        # optional formatter command to format generated code
-#        formatter_cmd: ".devbox/nix/profile/default/bin/scalafmt --stdin"
+        formatter_cmd: "swift format"

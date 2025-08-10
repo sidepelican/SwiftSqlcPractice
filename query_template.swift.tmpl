@@ -2,7 +2,7 @@
 // Template: query_template.swift.tmpl
 
 import Foundation
-import SQLKit
+import SQLiteNIO
 
 public enum Query {
 {{- range .Queries }}
@@ -33,12 +33,12 @@ public enum Query {
 
     // Convenience runner (matches SQLKit async API)
     {{- if eq .Cmd ":many" }}
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> [Row] {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
+      var query = SqlcQueryBuilder(sql)
       {{- range $i, $p := .Params }}
       query.bind(input.p{{ $p.Number }})
       {{- end }}
-      let rows = try await db.raw("\(query)").all()
+      let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
       for r in rows {
@@ -52,12 +52,12 @@ public enum Query {
       return result
     }
     {{- else if eq .Cmd ":one" }}
-    public static func execute(on db: SQLDatabase, input: Input) async throws -> Row? {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws -> Row? {
+      var query = SqlcQueryBuilder(sql)
       {{- range $i, $p := .Params }}
       query.bind(input.p{{ $p.Number }})
       {{- end }}
-      if let r = try await db.raw("\(query)").first() {
+      if let r = try await db.execute(query).first {
         return Row(
         {{- range $i, $c := .Columns }}
           {{- if $i }}, {{ end -}}
@@ -68,12 +68,12 @@ public enum Query {
       return nil
     }
     {{- else }}
-    public static func execute(on db: SQLDatabase, input: Input) async throws {
-      var query = SqlcQueryString(sql)
+    public static func execute(on db: SQLiteConnection, input: Input) async throws {
+      var query = SqlcQueryBuilder(sql)
       {{- range $i, $p := .Params }}
       query.bind(input.p{{ $p.Number }})
       {{- end }}
-      try await db.raw("\(query)").run()
+      _ = try await db.execute(query)
     }
     {{- end }}
   }
