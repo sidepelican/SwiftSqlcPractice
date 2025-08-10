@@ -1,0 +1,17 @@
+version: "2"
+plugins:
+- name: sqlc-gen-from-template
+  process:
+    cmd: sqlc-gen-from-template # https://github.com/fdietze/sqlc-gen-from-template
+sql:
+  - engine: "sqlite"
+    queries: "queries.sql"
+    schema: "schema.sql"
+    codegen:
+    - out: Sources/Gen/
+      plugin: sqlc-gen-from-template
+      options:
+        template: "query_template.swift.tmpl"
+        filename: "Queries.swift"
+#        # optional formatter command to format generated code
+#        formatter_cmd: ".devbox/nix/profile/default/bin/scalafmt --stdin"
