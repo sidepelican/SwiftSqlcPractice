@@ -1,52 +1,47 @@
 import SQLiteNIO
 
-public struct SqlcQueryBuilder {
-    @usableFromInline
+struct SqlcQueryBuilder {
     var sql: String
-
-    @usableFromInline
     var binds: [SQLiteData] = []
-
-    /// Create a query string from a plain string containing raw SQL.
-    @inlinable
-    public init(_ string: String) {
+    init(_ string: String) {
         self.sql = string
     }
 
-    @inlinable
-    public mutating func bind(_ value: some SQLiteBindable) {
-        binds.append(value.asSQLiteData)
+    mutating func bind(_ value: (some SQLiteDataConvertible)?) {
+        binds.append(value?.sqliteData ?? .null)
     }
 }
 
 extension SQLiteConnection {
-    public func execute(_ builder: SqlcQueryBuilder) async throws -> [SQLiteRow] {
+    func execute(_ builder: SqlcQueryBuilder) async throws -> [SQLiteRow] {
         return try await query(builder.sql, builder.binds)
     }
 }
 
-public protocol SQLiteBindable {
-    var asSQLiteData: SQLiteData { get }
+fileprivate struct AnyCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    init(stringValue: String) {
+        self.stringValue = stringValue
+    }
+    init?(intValue: Int) {
+        return nil
+    }
+
 }
 
-extension Optional: SQLiteBindable where Wrapped: SQLiteBindable {
-    public var asSQLiteData: SQLiteData {
-        if let value = self {
-            value.asSQLiteData
-        } else {
-            .null
+extension SQLiteDataConvertible {
+    static func decode(from column: SQLiteColumn) throws -> Self {
+        if let value = self.init(sqliteData: column.data) {
+            return value
         }
-    }
-}
 
-extension String: SQLiteBindable {
-    public var asSQLiteData: SQLiteData {
-        .text(self)
-    }
-}
-
-extension Int: SQLiteBindable {
-    public var asSQLiteData: SQLiteData {
-        .integer(self)
+        throw DecodingError.dataCorrupted(
+            DecodingError.Context(
+                codingPath: [AnyCodingKey(stringValue: column.name)],
+                debugDescription: "Decode failed. column=\(column.name)",
+                underlyingError: nil
+            )
+        )
     }
 }

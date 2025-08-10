@@ -1,8 +1,3 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-
-print("Hello, world!")
-
 import SQLiteKit
 import Logging
 import Foundation

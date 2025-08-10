@@ -8,11 +8,10 @@ public enum Query {
 {{- range .Queries }}
 
   public enum {{ .Name }} {
-    public static let name: String = "{{ .Name }}"
-    public static let cmd: String = "{{ .Cmd }}"
-    public static let sql: String = {{ printf "%q" .Text }}
+    public static var name: String { "{{ .Name }}" }
+    public static var cmd: String { "{{ .Cmd }}" }
+    public static var sql: String { {{ printf "%q" .Text }} }
 
-    // Input type
     public struct Input: Sendable {
     {{- range $i, $p := .Params }}
       public var p{{ $p.Number }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}
@@ -24,7 +23,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
     {{- range $i, $c := .Columns }}
       public var {{ $c.Name }}: {{- $t := $c.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $c.NotNull }}?{{ end }}
@@ -41,11 +39,12 @@ public enum Query {
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
-      for r in rows {
+      for row in rows {
+        let columns = row.columns
         result.append(Row(
         {{- range $i, $c := .Columns }}
           {{- if $i }}, {{ end -}}
-          {{ $c.Name }}: try r.decode(column: r.allColumns[{{ $i }}], as: {{- $t := $c.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $c.NotNull }}?.self{{ else }}.self{{ end }})
+          {{ $c.Name }}: try .decode(from: columns[{{ $i }}])
         {{- end }}
         ))
       }
@@ -57,11 +56,12 @@ public enum Query {
       {{- range $i, $p := .Params }}
       query.bind(input.p{{ $p.Number }})
       {{- end }}
-      if let r = try await db.execute(query).first {
+      if let row = try await db.execute(query).first {
+        let columns = row.columns
         return Row(
         {{- range $i, $c := .Columns }}
           {{- if $i }}, {{ end -}}
-          {{ $c.Name }}: try r.decode(column: r.allColumns[{{ $i }}], as: {{- $t := $c.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $c.NotNull }}?.self{{ else }}.self{{ end }})
+          {{ $c.Name }}: try .decode(from: columns[{{ $i }}])
         {{- end }}
         )
       }

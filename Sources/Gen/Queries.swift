@@ -7,12 +7,12 @@ import SQLiteNIO
 public enum Query {
 
   public enum GetTracksByAlbum {
-    public static let name: String = "GetTracksByAlbum"
-    public static let cmd: String = ":many"
-    public static let sql: String =
+    public static var name: String { "GetTracksByAlbum" }
+    public static var cmd: String { ":many" }
+    public static var sql: String {
       "SELECT t.TrackId, t.Name, t.Milliseconds\nFROM tracks AS t\nWHERE t.AlbumId = ?1\nORDER BY t.TrackId"
+    }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: Int
       public init(p1: Int) {
@@ -20,7 +20,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
       public var trackid: Int
       public var name: String
@@ -34,12 +33,12 @@ public enum Query {
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
-      for r in rows {
+      for row in rows {
+        let columns = row.columns
         result.append(
           Row(
-            trackid: try r.decode(column: r.allColumns[0], as: Int.self),
-            name: try r.decode(column: r.allColumns[1], as: String.self),
-            milliseconds: try r.decode(column: r.allColumns[2], as: Int.self)
+            trackid: try .decode(from: columns[0]), name: try .decode(from: columns[1]),
+            milliseconds: try .decode(from: columns[2])
           ))
       }
       return result
@@ -47,12 +46,12 @@ public enum Query {
   }
 
   public enum SearchTracksByName {
-    public static let name: String = "SearchTracksByName"
-    public static let cmd: String = ":many"
-    public static let sql: String =
+    public static var name: String { "SearchTracksByName" }
+    public static var cmd: String { ":many" }
+    public static var sql: String {
       "SELECT TrackId, Name\nFROM tracks\nWHERE Name LIKE '%' || ?1 || '%'\nORDER BY Name\nLIMIT ?2"
+    }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: String?
       public var p2: Int
@@ -62,7 +61,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
       public var trackid: Int
       public var name: String
@@ -76,11 +74,11 @@ public enum Query {
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
-      for r in rows {
+      for row in rows {
+        let columns = row.columns
         result.append(
           Row(
-            trackid: try r.decode(column: r.allColumns[0], as: Int.self),
-            name: try r.decode(column: r.allColumns[1], as: String.self)
+            trackid: try .decode(from: columns[0]), name: try .decode(from: columns[1])
           ))
       }
       return result
@@ -88,12 +86,12 @@ public enum Query {
   }
 
   public enum GetAlbumsByArtist {
-    public static let name: String = "GetAlbumsByArtist"
-    public static let cmd: String = ":many"
-    public static let sql: String =
+    public static var name: String { "GetAlbumsByArtist" }
+    public static var cmd: String { ":many" }
+    public static var sql: String {
       "SELECT a.AlbumId, a.Title\nFROM albums AS a\nWHERE a.ArtistId = ?1\nORDER BY a.AlbumId"
+    }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: Int
       public init(p1: Int) {
@@ -101,7 +99,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
       public var albumid: Int
       public var title: String
@@ -114,11 +111,11 @@ public enum Query {
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
-      for r in rows {
+      for row in rows {
+        let columns = row.columns
         result.append(
           Row(
-            albumid: try r.decode(column: r.allColumns[0], as: Int.self),
-            title: try r.decode(column: r.allColumns[1], as: String.self)
+            albumid: try .decode(from: columns[0]), title: try .decode(from: columns[1])
           ))
       }
       return result
@@ -126,11 +123,10 @@ public enum Query {
   }
 
   public enum GetArtistByID {
-    public static let name: String = "GetArtistByID"
-    public static let cmd: String = ":one"
-    public static let sql: String = "SELECT ArtistId, Name\nFROM artists\nWHERE ArtistId = ?1"
+    public static var name: String { "GetArtistByID" }
+    public static var cmd: String { ":one" }
+    public static var sql: String { "SELECT ArtistId, Name\nFROM artists\nWHERE ArtistId = ?1" }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: Int
       public init(p1: Int) {
@@ -138,7 +134,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
       public var artistid: Int
       public var name: String
@@ -148,10 +143,10 @@ public enum Query {
     public static func execute(on db: SQLiteConnection, input: Input) async throws -> Row? {
       var query = SqlcQueryBuilder(sql)
       query.bind(input.p1)
-      if let r = try await db.execute(query).first {
+      if let row = try await db.execute(query).first {
+        let columns = row.columns
         return Row(
-          artistid: try r.decode(column: r.allColumns[0], as: Int.self),
-          name: try r.decode(column: r.allColumns[1], as: String.self)
+          artistid: try .decode(from: columns[0]), name: try .decode(from: columns[1])
         )
       }
       return nil
@@ -159,11 +154,10 @@ public enum Query {
   }
 
   public enum CreateArtist {
-    public static let name: String = "CreateArtist"
-    public static let cmd: String = ":exec"
-    public static let sql: String = "INSERT INTO artists (Name)\nVALUES (?1)"
+    public static var name: String { "CreateArtist" }
+    public static var cmd: String { ":exec" }
+    public static var sql: String { "INSERT INTO artists (Name)\nVALUES (?1)" }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: String
       public init(p1: String) {
@@ -171,7 +165,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
     }
 
@@ -184,11 +177,10 @@ public enum Query {
   }
 
   public enum DeleteArtist {
-    public static let name: String = "DeleteArtist"
-    public static let cmd: String = ":exec"
-    public static let sql: String = "DELETE FROM artists\nWHERE ArtistId = ?1"
+    public static var name: String { "DeleteArtist" }
+    public static var cmd: String { ":exec" }
+    public static var sql: String { "DELETE FROM artists\nWHERE ArtistId = ?1" }
 
-    // Input type
     public struct Input: Sendable {
       public var p1: Int
       public init(p1: Int) {
@@ -196,7 +188,6 @@ public enum Query {
       }
     }
 
-    // Row type
     public struct Row: Sendable {
     }
 
