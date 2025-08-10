@@ -7,20 +7,18 @@ import SQLiteNIO
 public enum Query {
 {{- range .Queries }}
 
-  public enum {{ .Name }} {
-    public static var name: String { "{{ .Name }}" }
-    public static var cmd: String { "{{ .Cmd }}" }
-    public static var sql: String { {{ printf "%q" .Text }} }
+  public struct {{ .Name }}: Sendable {
+    public static var sql: String { """
+{{ .Text }}
+""" }
 
-    public struct Input: Sendable {
     {{- range $i, $p := .Params }}
-      public var p{{ $p.Number }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}
+    public var {{ $p.Column.Name }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}
     {{- end }}
-      public init({{- range $i, $p := .Params }}{{ if $i }}, {{ end }}p{{ $p.Number }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}{{- end }}) {
+    public init({{- range $i, $p := .Params }}{{ if $i }}, {{ end }}{{ $p.Column.Name }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}{{- end }}) {
       {{- range $i, $p := .Params }}
-        self.p{{ $p.Number }} = p{{ $p.Number }}
+      self.{{ $p.Column.Name }} = {{ $p.Column.Name }}
       {{- end }}
-      }
     }
 
     public struct Row: Sendable {
@@ -29,12 +27,11 @@ public enum Query {
     {{- end }}
     }
 
-    // Convenience runner (matches SQLKit async API)
     {{- if eq .Cmd ":many" }}
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
-      var query = SqlcQueryBuilder(sql)
+    public func execute(on db: SQLiteConnection) async throws -> [Row] {
+      var query = SqlcQueryBuilder(Self.sql)
       {{- range $i, $p := .Params }}
-      query.bind(input.p{{ $p.Number }})
+      query.bind({{ $p.Column.Name }})
       {{- end }}
       let rows = try await db.execute(query)
       var result: [Row] = []
@@ -51,10 +48,10 @@ public enum Query {
       return result
     }
     {{- else if eq .Cmd ":one" }}
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> Row? {
-      var query = SqlcQueryBuilder(sql)
+    public func execute(on db: SQLiteConnection) async throws -> Row? {
+      var query = SqlcQueryBuilder(Self.sql)
       {{- range $i, $p := .Params }}
-      query.bind(input.p{{ $p.Number }})
+      query.bind({{ $p.Column.Name }})
       {{- end }}
       if let row = try await db.execute(query).first {
         let columns = row.columns
@@ -68,10 +65,10 @@ public enum Query {
       return nil
     }
     {{- else }}
-    public static func execute(on db: SQLiteConnection, input: Input) async throws {
-      var query = SqlcQueryBuilder(sql)
+    public func execute(on db: SQLiteConnection) async throws {
+      var query = SqlcQueryBuilder(Self.sql)
       {{- range $i, $p := .Params }}
-      query.bind(input.p{{ $p.Number }})
+      query.bind({{ $p.Column.Name }})
       {{- end }}
       _ = try await db.execute(query)
     }

@@ -13,5 +13,4 @@ sql:
       options:
         template: "query_template.swift.tmpl"
         filename: "Queries.swift"
-#        # optional formatter command to format generated code
         formatter_cmd: "swift format"

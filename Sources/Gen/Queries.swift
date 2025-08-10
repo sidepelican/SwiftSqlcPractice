@@ -6,18 +6,18 @@ import SQLiteNIO
 
 public enum Query {
 
-  public enum GetTracksByAlbum {
-    public static var name: String { "GetTracksByAlbum" }
-    public static var cmd: String { ":many" }
+  public struct GetTracksByAlbum: Sendable {
     public static var sql: String {
-      "SELECT t.TrackId, t.Name, t.Milliseconds\nFROM tracks AS t\nWHERE t.AlbumId = ?1\nORDER BY t.TrackId"
+      """
+      SELECT t.TrackId, t.Name, t.Milliseconds
+      FROM tracks AS t
+      WHERE t.AlbumId = ?1
+      ORDER BY t.TrackId
+      """
     }
-
-    public struct Input: Sendable {
-      public var p1: Int
-      public init(p1: Int) {
-        self.p1 = p1
-      }
+    public var album_id: Int
+    public init(album_id: Int) {
+      self.album_id = album_id
     }
 
     public struct Row: Sendable {
@@ -25,11 +25,9 @@ public enum Query {
       public var name: String
       public var milliseconds: Int
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
+    public func execute(on db: SQLiteConnection) async throws -> [Row] {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(album_id)
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
@@ -45,32 +43,31 @@ public enum Query {
     }
   }
 
-  public enum SearchTracksByName {
-    public static var name: String { "SearchTracksByName" }
-    public static var cmd: String { ":many" }
+  public struct SearchTracksByName: Sendable {
     public static var sql: String {
-      "SELECT TrackId, Name\nFROM tracks\nWHERE Name LIKE '%' || ?1 || '%'\nORDER BY Name\nLIMIT ?2"
+      """
+      SELECT TrackId, Name
+      FROM tracks
+      WHERE Name LIKE '%' || ?1 || '%'
+      ORDER BY Name
+      LIMIT ?2
+      """
     }
-
-    public struct Input: Sendable {
-      public var p1: String?
-      public var p2: Int
-      public init(p1: String?, p2: Int) {
-        self.p1 = p1
-        self.p2 = p2
-      }
+    public var pattern: String?
+    public var limit: Int
+    public init(pattern: String?, limit: Int) {
+      self.pattern = pattern
+      self.limit = limit
     }
 
     public struct Row: Sendable {
       public var trackid: Int
       public var name: String
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
-      query.bind(input.p2)
+    public func execute(on db: SQLiteConnection) async throws -> [Row] {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(pattern)
+      query.bind(limit)
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
@@ -85,29 +82,27 @@ public enum Query {
     }
   }
 
-  public enum GetAlbumsByArtist {
-    public static var name: String { "GetAlbumsByArtist" }
-    public static var cmd: String { ":many" }
+  public struct GetAlbumsByArtist: Sendable {
     public static var sql: String {
-      "SELECT a.AlbumId, a.Title\nFROM albums AS a\nWHERE a.ArtistId = ?1\nORDER BY a.AlbumId"
+      """
+      SELECT a.AlbumId, a.Title
+      FROM albums AS a
+      WHERE a.ArtistId = ?1
+      ORDER BY a.AlbumId
+      """
     }
-
-    public struct Input: Sendable {
-      public var p1: Int
-      public init(p1: Int) {
-        self.p1 = p1
-      }
+    public var artist_id: Int
+    public init(artist_id: Int) {
+      self.artist_id = artist_id
     }
 
     public struct Row: Sendable {
       public var albumid: Int
       public var title: String
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> [Row] {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
+    public func execute(on db: SQLiteConnection) async throws -> [Row] {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(artist_id)
       let rows = try await db.execute(query)
       var result: [Row] = []
       result.reserveCapacity(rows.count)
@@ -122,27 +117,26 @@ public enum Query {
     }
   }
 
-  public enum GetArtistByID {
-    public static var name: String { "GetArtistByID" }
-    public static var cmd: String { ":one" }
-    public static var sql: String { "SELECT ArtistId, Name\nFROM artists\nWHERE ArtistId = ?1" }
-
-    public struct Input: Sendable {
-      public var p1: Int
-      public init(p1: Int) {
-        self.p1 = p1
-      }
+  public struct GetArtistByID: Sendable {
+    public static var sql: String {
+      """
+      SELECT ArtistId, Name
+      FROM artists
+      WHERE ArtistId = ?1
+      """
+    }
+    public var id: Int
+    public init(id: Int) {
+      self.id = id
     }
 
     public struct Row: Sendable {
       public var artistid: Int
       public var name: String
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws -> Row? {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
+    public func execute(on db: SQLiteConnection) async throws -> Row? {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(id)
       if let row = try await db.execute(query).first {
         let columns = row.columns
         return Row(
@@ -153,48 +147,44 @@ public enum Query {
     }
   }
 
-  public enum CreateArtist {
-    public static var name: String { "CreateArtist" }
-    public static var cmd: String { ":exec" }
-    public static var sql: String { "INSERT INTO artists (Name)\nVALUES (?1)" }
-
-    public struct Input: Sendable {
-      public var p1: String
-      public init(p1: String) {
-        self.p1 = p1
-      }
+  public struct CreateArtist: Sendable {
+    public static var sql: String {
+      """
+      INSERT INTO artists (Name)
+      VALUES (?1)
+      """
+    }
+    public var name: String
+    public init(name: String) {
+      self.name = name
     }
 
     public struct Row: Sendable {
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
+    public func execute(on db: SQLiteConnection) async throws {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(name)
       _ = try await db.execute(query)
     }
   }
 
-  public enum DeleteArtist {
-    public static var name: String { "DeleteArtist" }
-    public static var cmd: String { ":exec" }
-    public static var sql: String { "DELETE FROM artists\nWHERE ArtistId = ?1" }
-
-    public struct Input: Sendable {
-      public var p1: Int
-      public init(p1: Int) {
-        self.p1 = p1
-      }
+  public struct DeleteArtist: Sendable {
+    public static var sql: String {
+      """
+      DELETE FROM artists
+      WHERE ArtistId = ?1
+      """
+    }
+    public var id: Int
+    public init(id: Int) {
+      self.id = id
     }
 
     public struct Row: Sendable {
     }
-
-    // Convenience runner (matches SQLKit async API)
-    public static func execute(on db: SQLiteConnection, input: Input) async throws {
-      var query = SqlcQueryBuilder(sql)
-      query.bind(input.p1)
+    public func execute(on db: SQLiteConnection) async throws {
+      var query = SqlcQueryBuilder(Self.sql)
+      query.bind(id)
       _ = try await db.execute(query)
     }
   }
