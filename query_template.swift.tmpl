@@ -4,6 +4,17 @@
 import Foundation
 import SQLiteNIO
 
+{{ define "SwiftType" -}}
+  {{- $t := .Type.Name -}}
+  {{- if or (eq $t "INTEGER") (eq $t "integer") -}}Int
+  {{- else if or (eq $t "REAL") (eq $t "real") -}}Double
+  {{- else if or (eq $t "TEXT") (eq $t "text") -}}String
+  {{- else if or (eq $t "BLOB") (eq $t "blob") -}}Data
+  {{- else -}}String
+  {{- end -}}
+  {{- if not .NotNull -}}?{{- end -}}
+{{- end }}
+
 enum Query {
 {{- range .Queries }}
 
@@ -13,24 +24,28 @@ enum Query {
 """ }
 
     var binds: [SQLiteData] = []
-    init({{- range $i, $p := .Params }}{{ if $i }}, {{ end }}{{ $p.Column.Name }}: {{- $t := $p.Column.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $p.Column.NotNull }}?{{ end }}{{- end }}) {
+    init(
+      {{- range $i, $p := .Params -}}
+      {{- if $i }}, {{ end -}}
+      {{ $p.Column.Name }}: {{ template "SwiftType" $p.Column }}
+      {{- end -}}
+    ) {
       {{- range $i, $p := .Params }}
       binds.bind({{ $p.Column.Name }})
       {{- end }}
     }
 
     struct Row: DecodableFromSQLiteRow, Sendable {
-    {{- range $i, $c := .Columns }}
-      var {{ $c.Name }}: {{- $t := $c.Type.Name -}}{{ if or (eq $t "INTEGER") (eq $t "integer") }}Int{{ else if or (eq $t "REAL") (eq $t "real") }}Double{{ else if or (eq $t "TEXT") (eq $t "text") }}String{{ else if or (eq $t "BLOB") (eq $t "blob") }}Data{{ else }}String{{ end }}{{ if not $c.NotNull }}?{{ end }}
-    {{- end }}
+      {{- range $i, $c := .Columns }}
+      var {{ $c.Name }}: {{ template "SwiftType" $c }}
+      {{- end }}
       static func decode(from row: SQLiteRow) throws -> Row {
         {{- if gt (len .Columns) 0 -}}
         let columns = row.columns
         {{- end }}
         return Row(
-          {{- range $i, $c := .Columns }}
-          {{- if $i }},
-          {{ end -}}
+          {{- range $i, $c := .Columns -}}
+          {{- if $i }},{{ end }}
           {{ $c.Name }}: try .decode(from: columns[{{ $i }}])
           {{- end }}
         )
