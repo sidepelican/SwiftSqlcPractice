@@ -4,10 +4,10 @@
 import Foundation
 import SQLiteNIO
 
-public enum Query {
+enum Query {
 
-  public struct GetTracksByAlbum: Sendable {
-    public static var sql: String {
+  struct GetTracksByAlbum: SqlcQueryMany {
+    static var sql: String {
       """
       SELECT t.TrackId, t.Name, t.Milliseconds
       FROM tracks AS t
@@ -15,21 +15,17 @@ public enum Query {
       ORDER BY t.TrackId
       """
     }
-    public var album_id: Int
-    public init(album_id: Int) {
-      self.album_id = album_id
+
+    var binds: [SQLiteData] = []
+    init(album_id: Int) {
+      binds.bind(album_id)
     }
 
-    public struct Row: Sendable {
-      public var trackid: Int
-      public var name: String
-      public var milliseconds: Int
-    }
-    public func execute(on db: SQLiteConnection) async throws -> [Row] {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(album_id)
-      let rows = try await db.execute(query)
-      return try rows.map { row in
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var trackid: Int
+      var name: String
+      var milliseconds: Int
+      static func decode(from row: SQLiteRow) throws -> Row {
         let columns = row.columns
         return Row(
           trackid: try .decode(from: columns[0]),
@@ -40,8 +36,8 @@ public enum Query {
     }
   }
 
-  public struct SearchTracksByName: Sendable {
-    public static var sql: String {
+  struct SearchTracksByName: SqlcQueryMany {
+    static var sql: String {
       """
       SELECT TrackId, Name
       FROM tracks
@@ -50,23 +46,17 @@ public enum Query {
       LIMIT ?2
       """
     }
-    public var pattern: String?
-    public var limit: Int
-    public init(pattern: String?, limit: Int) {
-      self.pattern = pattern
-      self.limit = limit
+
+    var binds: [SQLiteData] = []
+    init(pattern: String?, limit: Int) {
+      binds.bind(pattern)
+      binds.bind(limit)
     }
 
-    public struct Row: Sendable {
-      public var trackid: Int
-      public var name: String
-    }
-    public func execute(on db: SQLiteConnection) async throws -> [Row] {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(pattern)
-      query.bind(limit)
-      let rows = try await db.execute(query)
-      return try rows.map { row in
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var trackid: Int
+      var name: String
+      static func decode(from row: SQLiteRow) throws -> Row {
         let columns = row.columns
         return Row(
           trackid: try .decode(from: columns[0]),
@@ -76,8 +66,8 @@ public enum Query {
     }
   }
 
-  public struct GetAlbumsByArtist: Sendable {
-    public static var sql: String {
+  struct GetAlbumsByArtist: SqlcQueryMany {
+    static var sql: String {
       """
       SELECT a.AlbumId, a.Title
       FROM albums AS a
@@ -85,20 +75,16 @@ public enum Query {
       ORDER BY a.AlbumId
       """
     }
-    public var artist_id: Int
-    public init(artist_id: Int) {
-      self.artist_id = artist_id
+
+    var binds: [SQLiteData] = []
+    init(artist_id: Int) {
+      binds.bind(artist_id)
     }
 
-    public struct Row: Sendable {
-      public var albumid: Int
-      public var title: String
-    }
-    public func execute(on db: SQLiteConnection) async throws -> [Row] {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(artist_id)
-      let rows = try await db.execute(query)
-      return try rows.map { row in
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var albumid: Int
+      var title: String
+      static func decode(from row: SQLiteRow) throws -> Row {
         let columns = row.columns
         return Row(
           albumid: try .decode(from: columns[0]),
@@ -108,76 +94,75 @@ public enum Query {
     }
   }
 
-  public struct GetArtistByID: Sendable {
-    public static var sql: String {
+  struct GetArtistByID: SqlcQueryOne {
+    static var sql: String {
       """
       SELECT ArtistId, Name
       FROM artists
       WHERE ArtistId = ?1
       """
     }
-    public var id: Int
-    public init(id: Int) {
-      self.id = id
+
+    var binds: [SQLiteData] = []
+    init(id: Int) {
+      binds.bind(id)
     }
 
-    public struct Row: Sendable {
-      public var artistid: Int
-      public var name: String
-    }
-    public func execute(on db: SQLiteConnection) async throws -> Row? {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(id)
-      if let row = try await db.execute(query).first {
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var artistid: Int
+      var name: String
+      static func decode(from row: SQLiteRow) throws -> Row {
         let columns = row.columns
         return Row(
           artistid: try .decode(from: columns[0]),
           name: try .decode(from: columns[1])
         )
       }
-      return nil
     }
   }
 
-  public struct CreateArtist: Sendable {
-    public static var sql: String {
+  struct CreateArtist: SqlcQueryOne {
+    static var sql: String {
       """
       INSERT INTO artists (Name)
       VALUES (?1)
+      RETURNING ArtistId
       """
     }
-    public var name: String
-    public init(name: String) {
-      self.name = name
+
+    var binds: [SQLiteData] = []
+    init(name: String) {
+      binds.bind(name)
     }
 
-    public struct Row: Sendable {
-    }
-    public func execute(on db: SQLiteConnection) async throws {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(name)
-      _ = try await db.execute(query)
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var artistid: Int
+      static func decode(from row: SQLiteRow) throws -> Row {
+        let columns = row.columns
+        return Row(
+          artistid: try .decode(from: columns[0])
+        )
+      }
     }
   }
 
-  public struct DeleteArtist: Sendable {
-    public static var sql: String {
+  struct DeleteArtist: SqlcQueryExec {
+    static var sql: String {
       """
       DELETE FROM artists
       WHERE ArtistId = ?1
       """
     }
-    public var id: Int
-    public init(id: Int) {
-      self.id = id
+
+    var binds: [SQLiteData] = []
+    init(id: Int) {
+      binds.bind(id)
     }
 
-    public struct Row: Sendable {
-    }
-    public func execute(on db: SQLiteConnection) async throws {
-      var query = SqlcQueryBuilder(Self.sql)
-      query.bind(id)
-      _ = try await db.execute(query)
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      static func decode(from row: SQLiteRow) throws -> Row {
+        return Row()
+      }
     }
   }
 }

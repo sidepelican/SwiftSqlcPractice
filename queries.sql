@@ -22,9 +22,10 @@ SELECT ArtistId, Name
 FROM artists
 WHERE ArtistId = sqlc.arg(id);
 
--- name: CreateArtist :exec
+-- name: CreateArtist :one
 INSERT INTO artists (Name)
-VALUES (sqlc.arg(name));
+VALUES (sqlc.arg(name))
+RETURNING ArtistId;
 
 -- name: DeleteArtist :exec
 DELETE FROM artists
