@@ -29,17 +29,14 @@ public enum Query {
       var query = SqlcQueryBuilder(Self.sql)
       query.bind(album_id)
       let rows = try await db.execute(query)
-      var result: [Row] = []
-      result.reserveCapacity(rows.count)
-      for row in rows {
+      return try rows.map { row in
         let columns = row.columns
-        result.append(
-          Row(
-            trackid: try .decode(from: columns[0]), name: try .decode(from: columns[1]),
-            milliseconds: try .decode(from: columns[2])
-          ))
+        return Row(
+          trackid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1]),
+          milliseconds: try .decode(from: columns[2])
+        )
       }
-      return result
     }
   }
 
@@ -69,16 +66,13 @@ public enum Query {
       query.bind(pattern)
       query.bind(limit)
       let rows = try await db.execute(query)
-      var result: [Row] = []
-      result.reserveCapacity(rows.count)
-      for row in rows {
+      return try rows.map { row in
         let columns = row.columns
-        result.append(
-          Row(
-            trackid: try .decode(from: columns[0]), name: try .decode(from: columns[1])
-          ))
+        return Row(
+          trackid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1])
+        )
       }
-      return result
     }
   }
 
@@ -104,16 +98,13 @@ public enum Query {
       var query = SqlcQueryBuilder(Self.sql)
       query.bind(artist_id)
       let rows = try await db.execute(query)
-      var result: [Row] = []
-      result.reserveCapacity(rows.count)
-      for row in rows {
+      return try rows.map { row in
         let columns = row.columns
-        result.append(
-          Row(
-            albumid: try .decode(from: columns[0]), title: try .decode(from: columns[1])
-          ))
+        return Row(
+          albumid: try .decode(from: columns[0]),
+          title: try .decode(from: columns[1])
+        )
       }
-      return result
     }
   }
 
@@ -140,7 +131,8 @@ public enum Query {
       if let row = try await db.execute(query).first {
         let columns = row.columns
         return Row(
-          artistid: try .decode(from: columns[0]), name: try .decode(from: columns[1])
+          artistid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1])
         )
       }
       return nil
