@@ -19,22 +19,27 @@ enum Query {
 {{- range .Queries }}
 
   struct {{ .Name }}: {{ if eq .Cmd ":many" }}SqlcQueryMany{{ else if eq .Cmd ":one" }}SqlcQueryOne{{ else }}SqlcQueryExec{{ end }} {
-    static var sql: String { """
+    var sql: String = """
 {{ .Text }}
-""" }
-
+"""
     var binds: [SQLiteData] = []
     init(
       {{- range $i, $p := .Params -}}
       {{- if $i }}, {{ end -}}
-      {{ $p.Column.Name }}: {{ template "SwiftType" $p.Column }}
+      {{ $p.Column.Name }}: {{ if $p.Column.IsSqlcSlice }}[{{ template "SwiftType" $p.Column }}]{{ else }}{{ template "SwiftType" $p.Column }}{{ end -}}
       {{- end -}}
     ) {
-      {{- range $i, $p := .Params }}
+      {{- range $i, $p := .Params -}}
+      {{- if $p.Column.IsSqlcSlice }}
+      replaceSliceParameterToPlaceholders(sql: &sql, paramName: "{{ $p.Column.Name }}", bindCount: {{ $p.Column.Name }}.count)
+      binds.binds({{ $p.Column.Name }})
+      {{- else }}
       binds.bind({{ $p.Column.Name }})
+      {{- end }}
       {{- end }}
     }
 
+    {{- if or (eq .Cmd ":many") (eq .Cmd ":one") }}
     struct Row: DecodableFromSQLiteRow, Sendable {
       {{- range $i, $c := .Columns }}
       var {{ $c.Name }}: {{ template "SwiftType" $c }}
@@ -51,6 +56,7 @@ enum Query {
         )
       }
     }
+    {{- end }}
   }
 {{- end }}
 }

@@ -21,6 +21,16 @@ print("GetTracksByAlbum(1):", tracksByAlbum.prefix(3).map { "\($0.trackid): \($0
 let tracksWithAlbumTitle = try await conn.execute(Query.GetTracksWithAlbumTitle())
 print("GetTracksWithAlbumTitle():", tracksWithAlbumTitle.prefix(3).map { "\($0.trackid): \($0.name), \($0.title)" })
 
+// IN (slice)
+var tracksByIDs = try await conn.execute(Query.GetTracksByIDs(track_ids: [1, 2, 3]))
+print("GetTracksByIDs([1,2,3]):", tracksByIDs.map { "\($0.trackid): \($0.name)" })
+tracksByIDs = try await conn.execute(Query.GetTracksByIDs(track_ids: []))
+print("GetTracksByIDs([]):", tracksByIDs.map { "\($0.trackid): \($0.name)" })
+
+// mixed slice/arg params
+let tracksByAlbumIDs = try await conn.execute(Query.GetTracksByAlbumIDs(album_ids: [1, 2], limit: 3))
+print("GetTracksByAlbumIDs([1,2], limit: 3) count=\(tracksByAlbumIDs.count):", tracksByAlbumIDs.map { "\($0.trackid): \($0.name), \($0.title)" })
+
 // create and delete
 let newArtistName = "sqlc_test_\(UUID().uuidString.prefix(8))"
 let newID = try await conn.execute(Query.CreateArtist(name: newArtistName))!.artistid

@@ -7,20 +7,16 @@ import SQLiteNIO
 enum Query {
 
   struct GetTracksByAlbum: SqlcQueryMany {
-    static var sql: String {
-      """
+    var sql: String = """
       SELECT t.TrackId, t.Name, t.Milliseconds
       FROM tracks AS t
       WHERE t.AlbumId = ?1
       ORDER BY t.TrackId
       """
-    }
-
     var binds: [SQLiteData] = []
     init(album_id: Int) {
       binds.bind(album_id)
     }
-
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
       var name: String
@@ -37,19 +33,15 @@ enum Query {
   }
 
   struct GetTracksWithAlbumTitle: SqlcQueryMany {
-    static var sql: String {
-      """
+    var sql: String = """
       SELECT t.TrackId, t.Name, a.Title
       FROM tracks AS t
       JOIN albums AS a ON t.AlbumId = a.AlbumId
       ORDER BY t.TrackId
       """
-    }
-
     var binds: [SQLiteData] = []
     init() {
     }
-
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
       var name: String
@@ -66,19 +58,15 @@ enum Query {
   }
 
   struct GetArtistByID: SqlcQueryOne {
-    static var sql: String {
-      """
+    var sql: String = """
       SELECT ArtistId, Name
       FROM artists
       WHERE ArtistId = ?1
       """
-    }
-
     var binds: [SQLiteData] = []
     init(id: Int) {
       binds.bind(id)
     }
-
     struct Row: DecodableFromSQLiteRow, Sendable {
       var artistid: Int
       var name: String
@@ -92,20 +80,73 @@ enum Query {
     }
   }
 
-  struct CreateArtist: SqlcQueryOne {
-    static var sql: String {
+  struct GetTracksByIDs: SqlcQueryMany {
+    var sql: String = """
+      SELECT TrackId, Name
+      FROM tracks
+      WHERE TrackId IN (/*SLICE:track_ids*/?)
+      ORDER BY TrackId
       """
+    var binds: [SQLiteData] = []
+    init(track_ids: [Int]) {
+      replaceSliceParameterToPlaceholders(
+        sql: &sql, paramName: "track_ids", bindCount: track_ids.count)
+      binds.binds(track_ids)
+    }
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var trackid: Int
+      var name: String
+      static func decode(from row: SQLiteRow) throws -> Row {
+        let columns = row.columns
+        return Row(
+          trackid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1])
+        )
+      }
+    }
+  }
+
+  struct GetTracksByAlbumIDs: SqlcQueryMany {
+    var sql: String = """
+      SELECT t.TrackId, t.Name, a.Title
+      FROM tracks AS t
+      JOIN albums AS a ON t.AlbumId = a.AlbumId
+      WHERE a.AlbumId IN (/*SLICE:album_ids*/?)
+      ORDER BY t.TrackId
+      LIMIT ?2
+      """
+    var binds: [SQLiteData] = []
+    init(album_ids: [Int], limit: Int) {
+      replaceSliceParameterToPlaceholders(
+        sql: &sql, paramName: "album_ids", bindCount: album_ids.count)
+      binds.binds(album_ids)
+      binds.bind(limit)
+    }
+    struct Row: DecodableFromSQLiteRow, Sendable {
+      var trackid: Int
+      var name: String
+      var title: String
+      static func decode(from row: SQLiteRow) throws -> Row {
+        let columns = row.columns
+        return Row(
+          trackid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1]),
+          title: try .decode(from: columns[2])
+        )
+      }
+    }
+  }
+
+  struct CreateArtist: SqlcQueryOne {
+    var sql: String = """
       INSERT INTO artists (Name)
       VALUES (?1)
       RETURNING ArtistId
       """
-    }
-
     var binds: [SQLiteData] = []
     init(name: String) {
       binds.bind(name)
     }
-
     struct Row: DecodableFromSQLiteRow, Sendable {
       var artistid: Int
       static func decode(from row: SQLiteRow) throws -> Row {
@@ -118,22 +159,13 @@ enum Query {
   }
 
   struct DeleteArtist: SqlcQueryExec {
-    static var sql: String {
-      """
+    var sql: String = """
       DELETE FROM artists
       WHERE ArtistId = ?1
       """
-    }
-
     var binds: [SQLiteData] = []
     init(id: Int) {
       binds.bind(id)
-    }
-
-    struct Row: DecodableFromSQLiteRow, Sendable {
-      static func decode(from row: SQLiteRow) throws -> Row {
-        return Row()
-      }
     }
   }
 }
