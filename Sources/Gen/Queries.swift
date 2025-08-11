@@ -36,59 +36,30 @@ enum Query {
     }
   }
 
-  struct SearchTracksByName: SqlcQueryMany {
+  struct GetTracksWithAlbumTitle: SqlcQueryMany {
     static var sql: String {
       """
-      SELECT TrackId, Name
-      FROM tracks
-      WHERE Name LIKE '%' || ?1 || '%'
-      ORDER BY Name
-      LIMIT ?2
+      SELECT t.TrackId, t.Name, a.Title
+      FROM tracks AS t
+      JOIN albums AS a ON t.AlbumId = a.AlbumId
+      ORDER BY t.TrackId
       """
     }
 
     var binds: [SQLiteData] = []
-    init(pattern: String?, limit: Int) {
-      binds.bind(pattern)
-      binds.bind(limit)
+    init() {
     }
 
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
       var name: String
-      static func decode(from row: SQLiteRow) throws -> Row {
-        let columns = row.columns
-        return Row(
-          trackid: try .decode(from: columns[0]),
-          name: try .decode(from: columns[1])
-        )
-      }
-    }
-  }
-
-  struct GetAlbumsByArtist: SqlcQueryMany {
-    static var sql: String {
-      """
-      SELECT a.AlbumId, a.Title
-      FROM albums AS a
-      WHERE a.ArtistId = ?1
-      ORDER BY a.AlbumId
-      """
-    }
-
-    var binds: [SQLiteData] = []
-    init(artist_id: Int) {
-      binds.bind(artist_id)
-    }
-
-    struct Row: DecodableFromSQLiteRow, Sendable {
-      var albumid: Int
       var title: String
       static func decode(from row: SQLiteRow) throws -> Row {
         let columns = row.columns
         return Row(
-          albumid: try .decode(from: columns[0]),
-          title: try .decode(from: columns[1])
+          trackid: try .decode(from: columns[0]),
+          name: try .decode(from: columns[1]),
+          title: try .decode(from: columns[2])
         )
       }
     }

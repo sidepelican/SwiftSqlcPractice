@@ -13,17 +13,13 @@ let conn = try await SQLiteConnection.open(
     storage: .file(path: tmpDBPath)
 ).get()
 
-// 1) GetTracksByAlbum
+// simple where
 let tracksByAlbum = try await conn.execute(Query.GetTracksByAlbum(album_id: 1))
 print("GetTracksByAlbum(1):", tracksByAlbum.prefix(3).map { "\($0.trackid): \($0.name) [\($0.milliseconds)ms]" })
 
-// 2) SearchTracksByName
-let found = try await conn.execute(Query.SearchTracksByName(pattern: "Love", limit: 5))
-print("SearchTracksByName('Love',5):", found.map { "\($0.trackid): \($0.name)" })
-
-// 3) GetAlbumsByArtist
-let albumsByArtist = try await conn.execute(Query.GetAlbumsByArtist(artist_id: 1))
-print("GetAlbumsByArtist(1):", albumsByArtist.prefix(3).map { "\($0.albumid): \($0.title)" })
+// join
+let tracksWithAlbumTitle = try await conn.execute(Query.GetTracksWithAlbumTitle())
+print("GetTracksWithAlbumTitle():", tracksWithAlbumTitle.prefix(3).map { "\($0.trackid): \($0.name), \($0.title)" })
 
 // create and delete
 let newArtistName = "sqlc_test_\(UUID().uuidString.prefix(8))"
