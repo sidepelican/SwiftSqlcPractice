@@ -32,21 +32,10 @@ extension SQLiteConnection {
             try Q.Row.decode(from: row)
         }
     }
-
 }
 
 protocol DecodableFromSQLiteRow {
     static func decode(from row: SQLiteRow) throws -> Self
-}
-
-extension [SQLiteData] {
-    mutating func bind(_ value: (some SQLiteDataConvertible)?) {
-        append(value?.sqliteData ?? .null)
-    }
-
-    mutating func binds(_ values: some Sequence<some SQLiteDataConvertible>) {
-        append(contentsOf: values.map { $0.sqliteData ?? .null })
-    }
 }
 
 fileprivate struct AnyCodingKey: CodingKey {
@@ -76,42 +65,57 @@ extension SQLiteDataConvertible {
     }
 }
 
-func replaceSliceParameterToPlaceholders(sql: inout String, paramName: String, bindCount: Int) {
-    // Locate the slice marker: /*SLICE:<paramName>*/?
-    let marker = Regex { "/*SLICE:"; paramName; "*/?" }
-    guard let r = sql.firstRange(of: marker) else { return }
-
-    let prefix = sql[..<r.lowerBound]
-    let suffix = sql[r.upperBound...]
-
-    // Find max numbered placeholder in the prefix to determine base index
-    let numbered = Regex {
-        "?"
-        TryCapture { OneOrMore(.digit) } transform: { Int($0) }
-    }
-    let maxIndex = prefix.matches(of: numbered).map(\.1).max() ?? 0
-    let base = maxIndex + 1
-
-    let replacement: String = if bindCount <= 0 {
-        "NULL"
-    } else {
-        (0..<bindCount).map { "?\(base + $0)" }.joined(separator: ", ")
+struct SqlcRawQueryBuilder {
+    var sql: String
+    init(sql: String) {
+        self.sql = sql
     }
 
-    // Renumber only placeholders whose index is greater than the slice base
-    let delta = bindCount - 1
-    let renumberedSuffix: Substring = if delta == 0 {
-        suffix
-    } else {
-        suffix.replacing(numbered) { match in
-            let n = match.1
-            if n > base {
-                return "?\(n + delta)"[...]
-            } else {
-                return match.0
+    private var indexBinds: [(Int16, SQLiteData)] = []
+    private var sliceBinds: [(String, [SQLiteData])] = []
+
+    mutating func bind(value: some SQLiteDataConvertible, atParamIndex index: Int16) {
+        indexBinds.append((index, value.sqliteData ?? .null))
+    }
+
+    mutating func bind(values: [some SQLiteDataConvertible], atSliceName name: String) {
+        sliceBinds.append((name, !values.isEmpty ? values.map { $0.sqliteData ?? .null } : [.null]))
+    }
+
+    mutating func build() -> (String, [SQLiteData]) {
+        var sql = sql
+        var binds: [SQLiteData?] = .init(
+            repeating: nil,
+            count: indexBinds.count + sliceBinds.reduce(0) { $0 + $1.1.count }
+        )
+
+        // 1st, assign fixed index binds
+        for (paramIndex, value) in indexBinds {
+            binds[Int(paramIndex - 1)] = value
+        }
+
+        // 2nd, assign slice parameters into unused binds slot.
+        var bindIndex = binds.startIndex
+        for (sliceName, values) in sliceBinds {
+            var usedParamIndices: [Int16] = []
+            for value in values {
+                // find empty slot and keep that index
+                while binds[bindIndex] != nil {
+                    bindIndex = binds.index(after: bindIndex)
+                }
+                binds[bindIndex] = value
+                usedParamIndices.append(Int16(bindIndex + 1))
+                bindIndex = binds.index(after: bindIndex)
+            }
+
+            let sliceRe = Regex { "/*SLICE:"; sliceName; "*/?" }
+            let placeholder = usedParamIndices.map { "?\($0)" }.joined(separator: ", ")
+            sql.replace(sliceRe) { _ in
+                placeholder
             }
         }
-    }
 
-    sql = prefix + replacement + renumberedSuffix
+        assert(binds.allSatisfy({ $0 != nil }))
+        return (sql, binds.map { $0! })
+    }
 }

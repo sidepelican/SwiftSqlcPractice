@@ -19,24 +19,26 @@ enum Query {
 {{- range .Queries }}
 
   struct {{ .Name }}: {{ if eq .Cmd ":many" }}SqlcQueryMany{{ else if eq .Cmd ":one" }}SqlcQueryOne{{ else }}SqlcQueryExec{{ end }} {
-    var sql: String = """
+    static var sql: String { """
 {{ .Text }}
-"""
-    var binds: [SQLiteData] = []
+""" }
+    let sql: String
+    let binds: [SQLiteData]
     init(
       {{- range $i, $p := .Params -}}
       {{- if $i }}, {{ end -}}
       {{ $p.Column.Name }}: {{ if $p.Column.IsSqlcSlice }}[{{ template "SwiftType" $p.Column }}]{{ else }}{{ template "SwiftType" $p.Column }}{{ end -}}
       {{- end -}}
     ) {
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
       {{- range $i, $p := .Params -}}
       {{- if $p.Column.IsSqlcSlice }}
-      replaceSliceParameterToPlaceholders(sql: &sql, paramName: "{{ $p.Column.Name }}", bindCount: {{ $p.Column.Name }}.count)
-      binds.binds({{ $p.Column.Name }})
+      builder.bind(values: {{ $p.Column.Name }}, atSliceName: "{{ $p.Column.Name }}")
       {{- else }}
-      binds.bind({{ $p.Column.Name }})
+      builder.bind(value: {{ $p.Column.Name }}, atParamIndex: {{ $p.Number }})
       {{- end }}
       {{- end }}
+      (sql, binds) = builder.build()
     }
 
     {{- if or (eq .Cmd ":many") (eq .Cmd ":one") }}

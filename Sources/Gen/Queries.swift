@@ -7,15 +7,20 @@ import SQLiteNIO
 enum Query {
 
   struct GetTracksByAlbum: SqlcQueryMany {
-    var sql: String = """
+    static var sql: String {
+      """
       SELECT t.TrackId, t.Name, t.Milliseconds
       FROM tracks AS t
       WHERE t.AlbumId = ?1
       ORDER BY t.TrackId
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(album_id: Int) {
-      binds.bind(album_id)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(value: album_id, atParamIndex: 1)
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
@@ -33,14 +38,19 @@ enum Query {
   }
 
   struct GetTracksWithAlbumTitle: SqlcQueryMany {
-    var sql: String = """
+    static var sql: String {
+      """
       SELECT t.TrackId, t.Name, a.Title
       FROM tracks AS t
       JOIN albums AS a ON t.AlbumId = a.AlbumId
       ORDER BY t.TrackId
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init() {
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
@@ -58,14 +68,19 @@ enum Query {
   }
 
   struct GetArtistByID: SqlcQueryOne {
-    var sql: String = """
+    static var sql: String {
+      """
       SELECT ArtistId, Name
       FROM artists
       WHERE ArtistId = ?1
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(id: Int) {
-      binds.bind(id)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(value: id, atParamIndex: 1)
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var artistid: Int
@@ -81,17 +96,20 @@ enum Query {
   }
 
   struct GetTracksByIDs: SqlcQueryMany {
-    var sql: String = """
+    static var sql: String {
+      """
       SELECT TrackId, Name
       FROM tracks
       WHERE TrackId IN (/*SLICE:track_ids*/?)
       ORDER BY TrackId
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(track_ids: [Int]) {
-      replaceSliceParameterToPlaceholders(
-        sql: &sql, paramName: "track_ids", bindCount: track_ids.count)
-      binds.binds(track_ids)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(values: track_ids, atSliceName: "track_ids")
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
@@ -107,7 +125,8 @@ enum Query {
   }
 
   struct GetTracksByAlbumIDs: SqlcQueryMany {
-    var sql: String = """
+    static var sql: String {
+      """
       SELECT t.TrackId, t.Name, a.Title
       FROM tracks AS t
       JOIN albums AS a ON t.AlbumId = a.AlbumId
@@ -115,12 +134,14 @@ enum Query {
       ORDER BY t.TrackId
       LIMIT ?2
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(album_ids: [Int], limit: Int) {
-      replaceSliceParameterToPlaceholders(
-        sql: &sql, paramName: "album_ids", bindCount: album_ids.count)
-      binds.binds(album_ids)
-      binds.bind(limit)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(values: album_ids, atSliceName: "album_ids")
+      builder.bind(value: limit, atParamIndex: 2)
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var trackid: Int
@@ -138,14 +159,19 @@ enum Query {
   }
 
   struct CreateArtist: SqlcQueryOne {
-    var sql: String = """
+    static var sql: String {
+      """
       INSERT INTO artists (Name)
       VALUES (?1)
       RETURNING ArtistId
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(name: String) {
-      binds.bind(name)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(value: name, atParamIndex: 1)
+      (sql, binds) = builder.build()
     }
     struct Row: DecodableFromSQLiteRow, Sendable {
       var artistid: Int
@@ -159,13 +185,18 @@ enum Query {
   }
 
   struct DeleteArtist: SqlcQueryExec {
-    var sql: String = """
+    static var sql: String {
+      """
       DELETE FROM artists
       WHERE ArtistId = ?1
       """
-    var binds: [SQLiteData] = []
+    }
+    let sql: String
+    let binds: [SQLiteData]
     init(id: Int) {
-      binds.bind(id)
+      var builder = SqlcRawQueryBuilder(sql: Self.sql)
+      builder.bind(value: id, atParamIndex: 1)
+      (sql, binds) = builder.build()
     }
   }
 }
